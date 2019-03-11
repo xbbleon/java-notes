@@ -17,7 +17,7 @@
 
 ## ✏️ 算法
 
-- [ROS](https://xiongbowhut.github.io/java-notes/blob/master/2018-07-19-ros.md)
+- [ROS](https://github.com/xiongbowhut/java-notes/master/2018-07-19-ros.md)
 - [Leetcode 题解](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/Leetcode%20题解%20-%20目录.md)
 - [算法](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/算法%20-%20目录.md)
 
