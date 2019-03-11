@@ -1,0 +1,357 @@
+---
+layout:     post
+title:      "ROS学习笔记（一）"
+subtitle:   " \"ROS学习笔记（一）\""
+date:       2018-07-19 15:52:00
+author:     "xbbleon"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - ROS
+---
+
+## 1 ROS文件系统介绍
+-    Packages:软件包，ROS应用程序代码的组织单元，每个软件包都可以包含程序、可执行文件、脚本或者其他手动创建的东西。
+-    Manifest(package.xml):清单，是对于‘软件包’相关信息的描述，用于定义软件相关元信息之间的依赖关系，这些信息包括版本、维护者和许可协议等。
+
+---
+### 1.1 文件系统工具
+&emsp;&emsp;程序代码是分布在众多ROS软件包中，ROS提供了专门的命工具来简化浏览操作。
+#### 1.1.1 rospack
+&emsp;&emsp;rospack允许你获取软件包的有关信息。详细的文档信息，点击[这里](http://docs.ros.org/independent/api/rospkg/html/rospack.html)。  
+
+&emsp;&emsp;针对rospack的find参数选进行举例说明。  
+
+用法:
+    
+    # rospack find [包名称]
+示例
+
+    $ rospack find roscpp
+    
+结果输出：
+
+    /opt/ros/melodic/share/roscpp
+
+#### 1.1.2 roscd
+&emsp;&emsp;roscd是[rosbash](http://wiki.ros.org/rosbash)命令集中的一部分，它允许你直接切换(cd)工作目录到某个软件包或者软件包集当中。
+
+用法：
+
+    # roscd [本地包名称[/子目录]]
+    
+示例：
+
+    $ roscd roscpp
+    $ pwd
+    
+通过pwd命令来输出当前工作目录，结果可以看到：
+
+    /opt/ros/melodic/share/roscpp
+    
+当然，使用roscd也可以切换到一个软件包或软件包集的子目录中。  
+
+例如：
+
+    $ roscd roscpp/cmake
+    $ pwd
+结果可以看到：
+    
+    /opt/ros/melodic/share/roscpp/cmake
+
+#### 1.1.3 roscd log
+&emsp;&emsp;使用roscd log可以切换ROS保存日志文件的目录下。如果没有执行任何ROS程序，系统会报错该目录找不到。
+
+#### 1.1.4 rosls
+&emsp;&emsp;顾名思义，ros+ls。也是rosbash命令集中的一部分，允许你直接按软件包的名称而不是绝对路径执。
+用法：
+
+    # rosls [本地包名称[/子目录]]
+
+示例：
+
+    $ rosls roscpp_tutorials
+    
+输出：
+
+    cmake  launch  package.xml  srv
+    
+#### 1.1.5 Tab自动完成输入
+
+&emsp;&emsp;显然通过按tab能快速补充要输入的内容，有点像IDE的智能助手。但是当多个名称开头是一样的时候，命令会尽可能地自动补充完，但是连续按tab会列出所有上面开头的ROS软件包。总之，谁用谁知道。
+
+---
+
+## 2 创建ROS程序包
+
+如何创建程序包并查看程序包依赖关。
+
+---
+### 2.1 catkin程序包组成
+- 必须包含[catkin compliantpackage.xml](http://wiki.ros.org/catkin/package.xml)文件，这个package.xml提供有关程序包的元信息。
+- 程序包必须包含一个[catkin版本的CMakeLists.txt](http://wiki.ros.org/catkin/CMakeLists.txt)文件，而[Catkinmetapackages](http://wiki.ros.org/catkin/package.xml#Metapackages)中必须包含一个对CMakeList.txt文件的引用。 
+- 每个目录下只能由一个程序包，这意味着同一个目录下不能有嵌套的或者多个程序包存在。
+
+### 2.2 在catkin中的程序包
+&emsp;&emsp;首先，通过[创建catkin工作空间教程](http://wiki.ros.org/catkin/Tutorials/create_a_workspace)创建一个空白的catkin工作空间。  
+接着一个简单的工作空间看起来像这个：
+    
+    workspace_folder/        -- WORKSPACE
+        src/                   -- SOURCE SPACE
+            CMakeLists.txt       -- 'Toplevel' CMake file, provided by catkin
+            package_1/
+                CMakeLists.txt     -- CMakeLists.txt file for package_1
+                package.xml        -- Package manifest for package_1
+            ...
+            package_n/
+                CMakeLists.txt     -- CMakeLists.txt file for package_n
+                package.xml        -- Package manifest for package_n
+详细的表示可以查看[catkin工作空间](http://wiki.ros.org/catkin/workspaces).
+
+### 2.3 创建一个catkin程序包
+&emsp;&emsp;通过[catkin_create_pkg](http://wiki.ros.org/catkin/commands/catkin_create_pkg)命令来创建一个新的catkin程序包。
+
+首先切换到之前创建俄catkin工作空间中的src目录下：
+
+    $ cd ~/catkin_ws/src
+
+现在使用catkin_create_pkg命来创建一个新程序包，这个程序包依赖于std_msgs、roscpp和rospy:
+
+    $ catkin_create_pkg xbb_leon std_msgs rospy roscpp
+
+这时会创建一个名为xbb_leon的文件夹，这个文件夹包含一个package.xml和CMakeLists.txt文件，这两个文件都已经自动包含了部分你在执行catkin_create_pkg命令时提供的信息。
+
+使用catkin_create_pkg必须输入你的程序包名，如果有需要，还可以在后面添加一些需要以来的其他程序包：
+
+    # catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
+
+更多高级功能查看该命令的详细描述。
+
+### 2.4 程序包的依赖关系
+
+#### 2.4.1 一级依赖
+
+&emsp;&emsp;前面创建程序包的时候，定义了几个程序包作为依赖包，现在可以通过rospack命令工具来查看一级依赖包
+
+     $ rospack depends1 xbb_leon
+结果：
+
+    std_msgs
+    rospy
+    roscpp
+
+可以看到创建程序包时定义的依赖包，这些依赖被保在package.xml文件中。
+
+    $ roscd beginner_tutorials
+    $ cat package.xml
+    
+可以看到package.xml的内容。
+
+---
+备注：可能在运行的时候显示No such package/stack xxx。
+
+原因 ：没有将 /home/catkin_ws/devel/setup.bash添加.bashrc中
+
+解决操作：
+    
+    gedit ~/.bashrc
+    <!-- 然后在最后加上这句话 -->
+    
+    source /home/xbbleon/catkin_ws/devel/setup.bash
+    <!-- 具体要定位到你自己的目录 -->
+
+
+---
+#### 2.4.2 间接依赖
+
+&emsp;&emsp;很多情况下，一个依赖包还会有它自己的依赖包，就像Java中父类的父类，只不过这里是依赖关系。
+
+首先查看rospy的一级依赖
+
+    $ rospack depends1 rospy
+    
+结果：
+
+    genpy
+    rosgraph
+    rosgraph_msgs
+    roslib
+    std_msgs
+    
+然后查看xbb_leon这个之前创建的程序包的所有依赖包，rospack递归检测出这些依赖。
+
+    $ rospack depends xbb_leon
+    
+结果：
+
+    cpp_common
+    rostime
+    roscpp_traits
+    roscpp_serialization
+    catkin
+    genmsg
+    genpy
+    message_runtime
+    gencpp
+    geneus
+    gennodejs
+    genlisp
+    message_generation
+    rosbuild
+    rosconsole
+    std_msgs
+    rosgraph_msgs
+    xmlrpcpp
+    roscpp
+    rosgraph
+    ros_environment
+    rospack
+    roslib
+    rospy
+
+### 2.5 自定义程序包
+
+&emsp;&emsp;下面详细分析catkin_create_pkg命令生成的每个文件详细描述这些文件的组成部分以及如何自定义这些文件。
+
+#### 2.5.1 自定义package.xml
+
+- 首先是一些基本信息标签：描述标签(description)、维护者标签(maintainer)、许可标签(license)
+- 最终要的是依赖项标签（可能以加依赖包的时候会用到），详细介绍查看[Catkin Dependencies相关文档](http://wiki.ros.org/catkin/package.xml#Build.2C_Run.2C_and_Test_Dependencies). 按照默认生成的格式自己手动添加新的依赖包难度不大，需要说明一点的是，教程中说的run_depend应该指的是exec_depend.
+
+
+---
+## 3 编译ROS程序包
+
+安装好所需的系统依赖项，创建的程序包就可以编译了。
+
+记得事先在终端中source你的setup文件
+
+    $ source /opt/ros/melodic/setup.bash
+    
+中间的根据自己版本来定
+
+
+---
+### 3.1 使用catkin_make来编译你程序包
+
+首先进入catkin_ws
+    
+    $ cd ~/catkin_ws
+    
+在catkin_ws中开始编译，若源代码是在默认的src中（也就是前面的程序包在默认的src中），采用以下指令：
+
+    $ catkin_make
+    $ catkin_make install  # (可选)
+    
+若不在默认的src，而是在同目录下的另一个文件夹如my_src（这里my_src和src在同一级），采用以下指令：
+
+    $ catkin_make --source my_src
+    $ catkin_make install --source my_src  # (optionally)
+    
+catkin_make的高级用法，点[这里](http://wiki.ros.org/catkin/commands/catkin_make).
+
+编译过程中终端输出的东西目前也没用用到，所以这里先忽略。等需要用到的时候再来分析。
+
+catkin_ws中默认有三个文件夹，build、devel、src. 
+其中build 目录是build space的默认所在位置，同时cmake 和 make也是在这里被调用来配置并编译你的程序包。devel目录是devel space的默认所在位置, 同时也是在你安装程序包之前存放可执行文件和库文件的地方。 
+
+
+## 4 理解ROS节点
+
+首先先安装一个轻量级模拟器（前面安装过了就pass）：
+    
+    $ sudo apt-get install ros-melodic-ros-tutorials
+
+替换中间的版本号
+
+### 4.1 图概念
+
+- Nodes：节点，一个节点即为一个可执行文件，它可以通过ROS与其它节点进行通信。
+- Messages:消息，消息是一种ROS数据类型，用于订阅或发布到一个话题。
+- Topics:话题,节点可以发布消息到话题，也可以订阅话题以接收消息。
+- Master:节点管理器，ROS名称服务 (比如帮助节点找到彼此)。 
+- rosout: ROS中相当于stdout/stderr。 
+- roscore: 主机+ rosout + 参数服务器 (参数服务器会在后面介绍)。
+
+#### 4.1.1 节点
+
+&emsp;&emsp;一个节点其实只不过是ROS程序包中的一个可执行文件。ROS节点可以使用ROS客户库与其他节点通信。节点可以发布或接收一个话题。节点也可以提供或使用某种服务。
+ 
+（节点是ros中非常重要的一个概念，为了帮助初学者理解这个概念，这里举一个通俗的例子：
+例如，咱们有一个机器人，和一个遥控器，那么这个机器人和遥控器开始工作后，就是两个节点。遥控器起到了下达指 令的作用；机器人负责监听遥控器下达的指令，完成相应动作。从这里我们可以看出，节点是一个能执行特定工作任务的工作单元，并且能够相互通信，从而实现一个机器人系统整体的功能。在这里我们把遥控器和机器人简单定义为两个节点，实际上在机器人中根据控制器、传感器、执行机构等不同组成模块，还可以将其进一步细分为更多的节点，这个是根据用户编写的程序来定义的。） 
+
+#### 4.1.2 客户端库
+
+ROS客户端库允许使用不同编程语言编写的节点之间互相通信: 
+
+- rospy = python 客户端
+- roscpp = c++ 客户端
+
+#### 4.1.3 roscore
+
+在运行所有ROS程序前首先运行roscore
+
+    $ roscore
+
+如果 roscore 运行后无法正常初始化，很有可能是存在网络配置问题。参见[网络设置](http://www.ros.org/wiki/ROS/NetworkSetup#Single_machine_configuration)
+
+如果roscore不能初始化并提示缺少权限，可能是因为~/.ros文件夹归属于root用户，修改该文件夹的用户归属关系：
+
+    $ sudo chown -R <your_username> ~/.ros
+    
+#### 4.1.4 使用rosnode
+
+注意，这里需要打开一个**新终端**，运行
+
+    $ rosnode list
+显示当前运行的ROS节点信息。
+
+一般情况下会显示：
+    
+    /rosout
+&emsp;&emsp;这表示当前只有一个节点在运行:**rosout**。因为这个节点用于收集和记录节点调试输出信息，所以它总是在运行的。 
+
+**rosnode info** 命令返回的是关于一个特定节点的信息。 
+
+    $ rosnode info /rosout
+    
+可以看到一有关于rosout的信息。
+
+#### 4.1.4 使用rosrun
+
+rosrun允许你使用包名直接运行一个包内的节点（不需要知道这个包的路径）。
+ 
+用法：
+
+    $ rosrun [package_name] [node_name]
+    
+继续前面的，在一个新终端：
+
+    $ rosrun turtlesim turtlesim_node
+
+运turtlesim包中的turtlesim_node，可以看到turtlesim窗口。
+
+在一个**新终端**：
+
+    $ rosnode list
+可以看到：
+
+    /rosout
+    /turtlesim
+
+ROS的一个强大特性就是你可以通过命令行重新配置名称。
+
+- 首先回到运行turtlesim的终端，使用ctrl+c关闭节。
+- 重新运行他，但是这一次使用[Remapping Argument](http://wiki.ros.org/Remapping%20Arguments)改变节名称
+    
+        $ rosrun turtlesim turtlesim_node __name:=my_turtle
+
+- 然后再使用rosnode list:
+
+  
+    /rosout
+    /my_turtle
+    
+并且，可以来ping一个节点
+    
+    $ rosnode ping my_turtle
+

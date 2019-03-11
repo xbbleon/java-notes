@@ -1,0 +1,189 @@
+---
+layout:     post
+title:      "三维空间坐标系变换"
+subtitle:   " \"三维空间坐标系变换\""
+date:       2018-10-15 19:46:00
+author:     "xbbleon"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - ROS Moveit
+---
+
+## 三维空间坐标系变换
+概要：三维坐标系的变换，实质上则是原点以及正交基向量的变化，在空间中表现为平移和旋转。
+
+为了方便自己回顾，简单记录一下三维坐标旋转矩阵的推导过程以及表示方法。
+
+---
+### 1 问题描述
+
+已知两个坐标系{O}和{A}。首先，坐标系{O}中，P点坐标为`$(x,y,z)$`，x轴方向的单位向量为`$\vec i$`，y轴方向的单位向量为`$\vec j$`，z轴方向的单位向量为`$\vec k$`,这里我们假定{O}是我们的基坐标系；对于坐标系{A}的坐标系原点A点，在基坐标系中的坐标是
+$$({x_0},{y_0},{z_0})$$,对于坐标系{A}的`$x,y,z$`轴的单位向量分别是`$\vec i',\vec j',\vec k'$`
+
+向量的长度和方向与其在哪个坐标系无关。
+
+那么假设`$\vec i',\vec j',\vec k'$`与`$\vec i,\vec j,\vec k$`有如下关系：
+
+```math
+\left\{ \begin{array}{l}
+\vec i' = {n_x}\vec i + {n_y}\vec j + {n_z}\vec k\\
+\vec j' = {o_x}\vec i + {o_y}\vec j + {o_z}\vec k\\
+\vec k' = {a_x}\vec i + {a_y}\vec j + {a_z}\vec k
+\end{array} \right.
+```
+在以上条件下，求解点P在{A}坐标系中的坐标`$(x',y',z')$`
+
+### 2 问题求解
+首先，将点P坐标`$(x',y',z')$`写成基向量表示形式，即：`$ \vec {AP}  = (x',y',z') = x'\vec i' + y'\vec j' + z'\vec k'$`,根据已知条件，已知:
+
+`$ \vec {OA}  = ({x_0},{y_0},{z_0}) = {x_0}\vec i + {y_0}\vec j + {z_0}\vec k $`, 
+
+`$ \vec {OP}  = (x,y,z) = x\vec i + y\vec j + z\vec k$`.
+
+将上面三个向量带入`$ \vec {OP} = \vec {OA} + \vec {AP} $` 结合1中矩阵，可以得到一个线性方程组：
+
+```math
+\left\{ \begin{array}{l}
+{n_x}x' + {o_x}y' + {a_x}z' + {x_0} = x\\
+{n_y}x' + {o_y}y' + {a_y}z' + {y_0} = y\\
+{n_z}x' + {o_z}y' + {a_z}z' + {z_0} = z
+\end{array} \right.
+```
+写成矩阵形式：
+
+```math
+\left[ \begin{matrix}
+{{n_x}}&{{o_x}}&{{a_x}}&{{x_0}}\\
+{{n_y}}&{{o_y}}&{{a_y}}&{{y_0}}\\
+{{n_z}}&{{o_z}}&{{a_z}}&{{z_0}}\\
+0&0&0&1
+\end{matrix} \right]
+\left[ \begin{matrix}
+{x'}\\
+{y'}\\
+{z'}\\
+1
+\end{matrix} \right]=
+\left[ \begin{matrix}
+x\\
+y\\
+z\\
+1
+\end{matrix} \right]
+```
+
+亦即,令`$ {}_A^OT = \left[ \begin{matrix}
+{}_A^OR&{}^OA\\
+0&1\end{matrix} \right] = \left[ \begin{matrix}
+{{n_x}}&{{o_x}}&{{a_x}}&{{x_0}}\\
+{{n_y}}&{{o_y}}&{{a_y}}&{{y_0}}\\
+{{n_z}}&{{o_z}}&{{a_z}}&{{z_0}}\\
+0&0&0&1\end{matrix} \right] $ `表示{0}为基坐标系，坐标系{A}基于坐标系{O}的变换矩阵。`${}_A^OR $`为旋转矩阵,`${}^OA$`为{A}的原点在{O}中的坐标，其中`${}_A^OR $`是正交矩阵。上面矩阵也可以写成以下形式：`${}_A^OT\left[ \begin{matrix}
+{}^AP\\1\end{matrix} \right] = \left[ {\begin{matrix}{}_A^OR&{}^OA\\
+0&1\end{matrix}} \right]\left[ \begin{matrix}{}^AP\\1\end{matrix} \right]=\left[ \begin{matrix}{}^OP\\1\end{matrix} \right] $`即`${}_A^OR{}^AP + {}^OA = {}^OP$`。（按照上下标其实很好理解）
+
+**小结**:
+- 如果已知一个坐标系{A}的基向量由另一个坐标系{O}的基向量的表示，那么坐标系{A}基于坐标系{O}的旋转矩阵为`$\left( {\vec n,\vec o,\vec a} \right)$`。
+
+- `${}_A^OT$`中旋转矩阵 `${}_A^OR $`是正交矩阵,求其逆矩阵很容易。所以 的逆矩阵为：
+```math
+{({}_A^OT)^{ - 1}} = \left[ {\begin{matrix}
+{{n_x}}&{{n_y}}&{{n_z}}&{ - ({x_0}{n_x} + {y_0}{n_y} + {z_0}{n_z})}\\
+{{o_x}}&{{o_y}}&{{o_z}}&{ - ({x_0}{o_x} + {y_0}{o_y} + {z_0}{o_z})}\\
+{{a_x}}&{{a_y}}&{{a_z}}&{ - ({x_0}{a_x} + {y_0}{a_y} + {z_0}{a_z})}\\
+0&0&0&1
+\end{matrix}} \right]
+```
+
+### 3 应用案例
+将一个坐标系中点的坐标转换到另一个坐标系中。例如机器人基座的坐标系为{O}，Kinect v2的坐标系为{A}，现在要将坐标系{A}中的点转换到坐标系{O}中，其实就是求解{O}与{A}之间的旋转矩阵。
+
+**解决方案：** 首先确定不共线的三个点`${P_1},{P_2},{P_3}$`。以这三个点，基于右手系原则（{O}和{A}都是右手系）建立坐标系{B}，分别求解{A}和{B}、{O}和{B}的旋转矩阵，然后通过这两个旋转矩阵来求解{O}和{A}的旋转矩阵，最后求解原点坐标偏移。（注：机器人坐标系单位是mm，而Kinect坐标系的单位是m，这里需要提前转换下尺度）
+
+
+**公式描述：** 对于某点P，有`${}_A^OR{}^AP + {}^OA = {}^OP$`
+
+对于{B}和{O}，有`${}_O^BR{}^OP + {}^BO = {}^BP$`，变换一下， `${}_B^OR{}^BP + {}^OB = {}^OP$`
+
+对于{A}和{O}，`${}_A^BR{}^AP + {}^BA = {}^BP$`将`${}^BP$`带入上式,
+
+得到`${}_B^OR({}_A^BR{}^AP + {}^BA) + {}^OB = {}_B^OR{}_A^BR{}^AP + {}_B^OR{}^BA + {}^OB = {}^OP$`,
+
+其中`${}_B^OR{}^BA + {}^OB = {}^OA$`，所以有`${}_B^OR{}_A^BR{}^AP + {}^OA = {}^OP = {}_A^OR{}^AP + {}^OA$`,最后的问题即为`${}_A^OR = {}_B^OR{}_A^BR = {}_B^OR({}_B^AR)'$`，求解`${}_B^OR,({}_B^AR)'$`
+
+**求解方法：**
+
+![image](https://xiongbowhut.github.io/img/in-post/motionplanning/frameTrans.png)
+
+前面已经讲了，只要确定两个坐标系间基向量的关系就可以确定旋转矩阵。以`${P_1}$`为原点，`$\vec {P_1P_2}$`为x轴正向，`${P_1},{P_2},{P_3}$`三点确定xoy平面，那么z轴正方向就是`$\vec {P_1P_2}  \times \vec {P_1P_3} $`的方向，y轴方向就是z轴与x轴正方向矢量叉乘得到。分别在坐标轴取`${P_4},{P_5},{P_6}$`,构成单位向量`$\vec {P_1P_4} ,\vec {P_1P_5} ,\vec {P_1P_6} $`,即`$\left\{ \begin{array}{l}
+\vec {P_1P_4}  = {a_1}\vec i + {b_1}\vec j + {c_1}\vec k\\
+\vec {P_1P_5}  = {a_2}\vec i + {b_2}\vec j + {c_2}\vec k\\
+\vec {P_1P_6}  = {a_3}\vec i + {b_3}\vec j + {c_3}\vec k
+\end{array} \right.$`，其中`$\vec i,\vec j,\vec k$`是{O}的基向量，故`${}_B^OR = \left[ \begin{matrix}
+{{a_1}}&{{a_2}}&{{a_3}}\\
+{{b_1}}&{{b_2}}&{{b_3}}\\
+{{c_1}}&{{c_2}}&{{c_3}}
+\end{matrix} \right]$` ，同理可以求`${}_B^AR$`。最后随便选取一个点确定`${}^OA$`即可。
+
+### Matlab代码
+
+**主程序：frameTrans.m**
+
+```
+%% 输入三个点P1，P2，P3（B，A，C）分别在两个坐标系中的坐标。
+% 假定机器人基坐标系为{O},kinect坐标系为{A},三个点构成的中间坐标系为{B}
+% 需要求解R(OA),{O}与{A}之间的旋转矩阵，这里是以{O}为基本坐标系，
+% 那么应该是R(OA)*P(A)+A(O)=P(O),即P点在{A}中的坐标左乘旋转矩阵，加上{A}的原点在{O}中的坐标，等于P在{O}中的坐标。
+% 具体解法：通过中间坐标系{B}来转换
+%% part1 求解R(OB)，即{O}和{B}的旋转矩阵，{O}是基坐标系
+P1_O = [377.1, 131.2, 356.7]/1000; % mm转换成m
+P2_O = [590.5, 381.4, 365.5]/1000;
+P3_O = [590.5, 381.4, 217.3]/1000;
+positions=[P1_O;P2_O;P3_O];
+rotationMatrix_OB = calRoationMatrix(positions);
+%% part2 求解R(AB)，即{A}和{B}的旋转矩阵，{A}是基坐标系
+P1_A = [-0.0793064, 0.0210873, 1.165];
+P2_A = [0.26392, 0.0207939, 1.153];
+P3_A = [0.265562, -0.127428, 1.158];
+positions=[P1_A;P2_A;P3_A];
+rotationMatrix_AB = calRoationMatrix(positions);
+%% part3 求解R(OA)，即{O}和{A}的旋转矩阵，{O}是基坐标系
+rotationMatrix_OA = rotationMatrix_OB * rotationMatrix_AB';
+rotationMatrix_OA
+%% part4 求解A(O)，即{A}的原点在{O}中的坐标
+% 这部分会出现很大的误差，考虑采用取平均值
+PA_O_1 = P1_O - (rotationMatrix_OA * P1_A')';
+PA_O_2 = P2_O - (rotationMatrix_OA * P2_A')';
+PA_O_3 = P3_O - (rotationMatrix_OA * P3_A')';
+PA_O = (PA_O_1 + PA_O_2 + PA_O_3)/3;
+%% 验证，通过P2和P3
+error_p1 = P1_O - ((rotationMatrix_OA*P1_A')' +PA_O);
+error_p2 = P2_O - ((rotationMatrix_OA*P2_A')' +PA_O);
+error_p3 = P3_O - ((rotationMatrix_OA*P3_A')' +PA_O);
+error_p1*1000
+error_p2*1000
+error_p3*1000
+
+```
+**函数：calRoationMatrix.m**
+
+```
+function rotationMatrix = calRoationMatrix(positions)
+% 输入是三个未共线点在基坐标系中的坐标矩阵，3*3
+% 3行代表3个点
+rotationMatrix = zeros(3,3);
+P1 = positions(1,:);
+P2 = positions(2,:);
+P3 = positions(3,:);
+P1_P2 = P2 - P1;
+P1_P3 = P3 - P1;
+P1_P4 = P1_P2 / (norm(P1_P2)); % x轴向量单位化 
+P1_P6 = cross(P1_P2, P1_P3);
+P1_P6 = P1_P6 / (norm(P1_P6)); % z轴向量单位化
+P1_P5 = cross(P1_P6,P1_P4); % y轴，单位向量的叉乘结果还是单位向量
+rotationMatrix(:,1) = P1_P4';
+rotationMatrix(:,2) = P1_P5';
+rotationMatrix(:,3) = P1_P6';
+end
+
+```

@@ -1,0 +1,413 @@
+---
+layout:     post
+title:      "ROS学习笔记（二）"
+subtitle:   " \"ROS学习笔记（二）\""
+date:       2018-07-20 15:52:00
+author:     "xbbleon"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - ROS
+---
+## 5 理解ROS话题
+
+首先，开启终端，运行
+    
+    $ roscore
+    
+再开启一个终端
+
+    $ rosrun turtlesim turtlesim_node
+    
+再开启一个终端
+
+    $ rosrun turtlesim turtle_teleop_key
+    
+选中最后开启的那个终端，通过使用方向键来控制乌龟移动。下面通过这个示例来详细讲解下整个流程。
+
+---
+
+
+### 5.1 ROS Topics
+
+&emsp;&emsp;可以看到，我们开始运行了turtlesim包里面的两个节点，turtlesim_node和turtle_teleop_key。实际上，这两个节点是通过ROS话题来进通信的。其中turtle_teleop_key在一个话题上**发布**按键的输入消息，而turtlesim则**订阅**该话题以接收该消息。
+
+#### 5.1.1 可视化节点和话题
+
+使用rqt_graph可以来显示当前运行的节点和话题。
+
+首先安装rqt程序包
+
+    $ sudo apt-get install ros-<distro>-rqt
+    $ sudo apt-get install ros-<distro>-rqt-common-plugins
+    
+根据版本来替换<distro>，我的是melodic
+
+在**新终端**中运行：
+
+    $ rosrun rqt_graph rqt_graph
+
+备注： 这里可能会出现问题，因为我电脑中安装了anocanda3，所以.bashrc里面有
+
+    export PATH="/home/xbbleon/anaconda3/bin:$PATH"
+    
+导致执行上面rosrun会包错，没有命名的模块，但是实际上模块是存在的，可能原因是路径冲突了。一解决方案是要使用rqt_graph的时候把anocanda3的路径给屏蔽了，要用的时候再恢复。
+打开新终端：
+
+    $ gedit ~/.bashrc
+
+在最后面屏蔽掉即可。如果以后有更好的方法会再更新。
+
+如果没有问题就继续。然后我们就可以看到一个图形。
+
+
+![image](http://wiki.ros.org/cn/ROS/Tutorials/UnderstandingTopics?action=AttachFile&do=get&target=rqt_graph_turtle_key.png)
+
+正如你所看到的，turtlesim_node和turtle_teleop_key节点正通过一个名为 /turtle1/command_velocity的话题来互相通信。
+
+好了，其实我觉得这个可视化只是锦上添花，实际过程中我们自己写的程序，逻辑自己也清楚。
+
+回到正题。
+
+#### 5.1.2 rostopic介绍
+
+rostopic命令工具能让你获取有关ROS话题的信息。 
+
+你可以使用帮助选项查看rostopic的子命令： 
+
+    $ rostopic -h
+    
+#### 5.1.3 使用 rostopic echo
+
+rostopic echo可以显示在某个话题上发布的数据。 
+
+用法：
+
+    rostopic echo [topic]
+    
+打开一个新终端：
+
+    $ rostopic echo /turtle1/command_velocity
+    
+正如我们前面说的，话题是/turtle1/command_velocity。
+
+这时终端上不会出现一些东西，因为还没有数据发布到该话题上。这是选中打开turtle_teleop_key节点的终端，通过方向键来控制乌龟运，可以看到在刚开的终端上看到控制信息。
+
+如果这个时候刷新一下ros graph，你可以看到
+
+![image](http://wiki.ros.org/cn/ROS/Tutorials/UnderstandingTopics?action=AttachFile&do=get&target=rqt_graph_echo.png)
+
+显示我们刚才运行的节点也订阅了该话题。
+
+#### 5.1.4 使用 rostopic list
+
+顾名思义，可以列出所有当前订阅或者发的话题。
+
+在新终端：
+    
+    $ rostopic list -h
+    
+可以查list子命令需要的参数。
+
+### 5.2 ROS Messages
+
+&emsp;&emsp;话题之间的通信是通过在节点之间发送ROS消息实现的。对于发布器(turtle_teleop_key)和订阅器(turtlesim_node)之间的通信，发布器和订阅器之间必须发送和接收相同类型的消息。这意味着话题的类型是由发布在它上面的消息类型决定的。使用rostopic type命令可以查看发布在某个话题上的消息类型。 
+
+#### 5.2.1 使用rostopic type
+
+使用rostopic type命令用来查看所发布话题的消息类型。
+
+用法：
+
+    rostopic type [topic]
+    
+如：
+
+    $ rostopic type /turtle1/cmd_vel
+
+会看到：
+
+    geometry_msgs/Twist
+    
+同时，我们可以使用rosmsg命令来查看消息的详细情况
+
+    $ rosmsg show geometry_msgs/Twist
+    
+### 5.3 继续rostopic
+
+#### 5.3.1 rostopic pub
+
+rostopic pub可以把数据发布到当前某个正在广播的话题上。 
+
+用法：
+    
+    rostopic pub [topic] [msg_type] [args]
+    
+示例：
+
+    $ rostopic pub -1 /turtle1/cmd_vel geometry_msgs/Twist -- '[2.0, 0.0, 0.0]' '[0.0, 0.0, 1.8]'
+    
+
+以上命令会发送一条消息给turtlesim，告诉它以2.0大小的线速度和1.8大小的角速度开始移动。
+
+下面具体分析：
+
+-       rostopic pub
+这条命令将会发布消息到某个给定的话题。
+
+-       -1
+（单个破折号）这个参数选项使rostopic发布一条消息后马上退出。 
+
+-       /turtle1/cmd_vel
+这是消息所发布到的话题名称。 
+
+-      geometry_msgs/Twist 
+所发布消息的类型
+
+-      双破折号（md文件打不出来。。因为前面还有一破折号）
+（双破折号）这会告诉命令选项解析器接下来的参数部分都不是命令选项。这在参数里面包含有破折号-（比如负号）时是必须要添加的。
+
+-       2.0 1.8
+这两个数是geometry_msgs/Twist 消息里面包含有的两个浮点元素:linear和angular。
+
+但是此时乌龟已经停止。
+
+可以通过rostopic pub -r命令来发布一个稳定的命令流：
+
+    $ rostopic pub /turtle1/cmd_vel geometry_msgs/Twist -r 1 -- '[2.0, 0.0, 0.0]' '[0.0, 0.0, 1.8]'
+    
+#### 5.3.2 rostopic hz
+
+rostopic hz命令可以用来**查看**数据发布的频率。
+
+用法：
+
+    rostopic hz [topic]
+    
+示例：
+
+    $ rostopic hz /turtle1/pose
+    
+### 5.4 使用rqt_plot
+
+rqt_plot命令可以实时显示一个发布到某个话题上的数据变化图形。这里我们将使用rqt_plot命令来绘制正在发布到/turtle1/pose话题上的数据变化图形。首先，在一个新终端中运行rqt_plot命令： 
+
+    $ rosrun rqt_plot rqt_plot
+    
+
+这会弹出一个新窗口，在窗口左上角的一个文本框里面你可以添加需要绘制的话题。在里面输入/turtle1/pose/x后之前处于禁用状态的加号按钮将会被使能变亮。按一下该按钮，并对/turtle1/pose/y重复相同的过程。现在你会在图形中看到turtle的x-y位置坐标图。 
+
+![image](http://wiki.ros.org/cn/ROS/Tutorials/UnderstandingTopics?action=AttachFile&do=get&target=rqt_plot.png)
+
+**注意：这里还是需要屏蔽anocanda3的路径才能用。**
+
+按下减号按钮会显示一组菜单让你隐藏图形中指定的话题。现在隐藏掉你刚才添加的话题并添加/turtle1/pose/theta，你会看到如下图所示的图形： 
+
+![image](http://wiki.ros.org/cn/ROS/Tutorials/UnderstandingTopics?action=AttachFile&do=get&target=rqt_plot2.png)
+
+
+---
+
+## 6 理解ROS服务和参数
+
+首先保证前面启动turtlesim_node仍在运行。
+
+### 6.1 ROS Services
+
+服务（services）是节点之间通讯的另一种方式。服务允许节点发送请求（request） 并获得一个响应（response）
+
+### 6.2 使用rosservice
+
+rosservice可以很轻松的使用ROS客户端/服务器框架提供的服务。rosservice提供了很多可以在topic上使用的命令，如下所示： 
+
+    rosservice list         输出可用服务的信息
+    rosservice call         调用带参数的服务
+    rosservice type         输出服务类型
+    rosservice find         依据类型寻找服务find services by service type
+    rosservice uri          输出服务的ROSRPC uri
+    
+#### 6.2.1 rosservice list
+
+    $ rosservice list
+    
+可以看到turtlesim节提供了9个服务。
+
+#### 6.2.2 rosservice type
+
+使用rosservice type命令更进一步查看clear服务：
+
+用法：
+
+    rosservice type [service]
+    
+例如:
+
+    $ rosservice type clear
+    
+返回结果为：
+
+    std_srvs/Empty
+    
+服务的类型为空（empty),这表明在调用这个服务是不需要参数（比如，请求不需要发送数据，响应也没有数据）。
+
+下面我们使用rosservice call命令调用服务。
+
+#### 6.2.3 rosservice call
+
+使用方法：
+
+    rosservice call [service] [args]
+
+因为clear服务类型是空，所以不用调用参数：
+
+    $ rosservice call clear
+    
+调用其他服务，如spawn(再生)，首先还是先查看该服务的信息：
+
+    $ rosservice type spawn| rossrv show
+    
+返回:
+    
+    float32 x
+    float32 y
+    float32 theta
+    string name
+    ---
+    string name
+
+名字参数可选，接着我们开始调用：
+
+    $ rosservice call spawn 2 2 0.2 "xbbleon"
+    
+终端会返回名字。这时会看到两只乌龟了。
+
+### 6.3 使用rosparam
+
+rosparam使得我们能够存储并操作ROS参数服务器（ParameterServer）上的数据。参数服务器能够存储整型、浮点、布尔、字符串、字典和列表等数据类型。rosparam使用YAML标记语言的语法。一般而言，YAML的表述很自然：1 是整型, 1.0 是浮点型, one是字符串, true是布尔, [1, 2, 3]是整型列表, {a: b, c: d}是字典. rosparam有很多指令可以用来操作参数，如下所示: 
+
+    rosparam set            设置参数
+    rosparam get            获取参数
+    rosparam load           从文件读取参数
+    rosparam dump           向文件中写入参数
+    rosparam delete         删除参数
+    rosparam list           列出参数名
+    
+#### 6.3.1 rosparam list
+
+    $ rosparam list
+    
+可以看到有三参数用于设定背景颜色。
+
+#### 6.3.2 rosparam set and get
+
+用法：
+
+    rosparam set [param_name]
+    rosparam get [param_name]
+    
+现在我们试着改变一下背景颜色的r通道：
+
+    $ rosparam set background_r 150
+    
+**上述指令修改了参数的值，现在我们调用清除服务使得修改后的参数生效**： 
+
+    $ rosservice call clear
+    
+当然，也能查看参数服务器上的参数值：
+
+    $ rosparam get background_g 
+    
+也可以直接获取参数服务器上的所有内容：
+
+    $ rosparam get /
+    
+#### 6.3.3 rosparam dump and rosparam load
+
+使用方法：
+
+    rosparam dump [file_name]
+    rosparam load [file_name] [namespace]
+    
+现在我们将所有的参数写入params.yaml文件：
+
+    $ rosparam dump params.yaml
+    
+你甚至可以将yaml文件重载入新的命名空间，比如说copy空间: 
+
+    $ rosparam load params.yaml copy
+
+这里没有指定路径，所以这个params.yaml会默认在/home/xbblen/ 下，也就是用户目录下。
+
+
+
+---
+## 7 使用 rqt_console 和 roslaunch
+
+首先安装rqt和turtlesim程序包
+
+    $ sudo apt-get install ros-melodic-rqt ros-melodic-rqt-common-plugins ros-melodic-turtlesim
+    
+可能之前已经编译过了，再编译一次也无妨。
+
+### 7.1 使用rqt_console 和rqt_logger_level
+
+rqt_console属于ROS日志框架(loggingframework)的一部分，用来显示节点的输出信息。rqt_logger_level允许我们修改节点运行时输出信息的日志等级（logger levels）（包括DEBUG、WARN、INFO和ERROR）。 
+
+在启动turtlesim之前运行rqt_console和rqt_logger_level：
+
+    $ rosrun rqt_console rqt_console
+    
+    $ rosrun rqt_logger_level rqt_logger_level
+    
+会看到两个弹窗。
+### 7.2 使用roslaunch
+
+roslaunch可以用来启动定义在launch文件中的多个节点。 
+
+用法：
+
+    $ roslaunch [package] [filename.launch]
+    
+先切换到beginner_tutorials程序包目录下： 
+
+    $ roscd beginner_tutorials
+    
+然后创建一个launch文件夹： 
+
+    $ mkdir launch
+    $ cd launch
+
+### 7.3 Launch 文件
+
+现在我们来创建一个名为turtlemimic.launch的launch文件并复制粘贴以下内容到该文件里面： 
+
+    <launch>
+     
+      <group ns="turtlesim1">
+         <node pkg="turtlesim" name="sim" type="turtlesim_node"/>
+      </group>
+     
+      <group ns="turtlesim2">
+        <node pkg="turtlesim" name="sim" type="turtlesim_node"/>
+      </group>
+     
+      <node pkg="turtlesim" name="mimic" type="mimic">
+       <remap from="input" to="turtlesim1/turtle1"/>
+       <remap from="output" to="turtlesim2/turtle1"/>
+      </node>
+    </launch>
+    
+详细讲解见ros教程。
+
+### 7.4 roslaunching 
+
+现在让我们通过roslaunch命令来启动launch文件： 
+
+    $ roslaunch beginner_tutorials turtlemimic.launch
+    
+可以看到两个窗口，每个窗口都有一个乌龟。
+
+新终端：
+
+    $ rostopic pub /turtlesim1/turtle1/cmd_vel geometry_msgs/Twist -r 1 -- '[2.0, 0.0, 0.0]' '[0.0, 0.0, -1.8]'
+    
+两个乌龟一样的运动。
